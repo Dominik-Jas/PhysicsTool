@@ -5,18 +5,24 @@
     <title>Video with 360° Protractor Overlay</title>
     <style>
         body {
-            background: #0f172a; /* dark background for contrast */
+            background: #D4D4D4;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             height: 100vh;
             margin: 0;
         }
 
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
         #container {
             position: relative;
-            width: 800px;
-            height: 450px;
+            width: 1000px;
+            height: 600px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             border-radius: 12px;
             overflow: hidden;
@@ -32,14 +38,21 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 800px;
-            height: 450px;
-            pointer-events: none;
+            width: 1000px;
+            height: 600px;
+            pointer-events: auto;
             opacity: 0.6;
+        }
+
+        #controls {
+            margin-top: 10px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
+<h1>Video Player with 360° Protractor</h1>
+
 <div id="container">
     <video id="videoPlayer" controls>
         <source src="sample.mp4" type="video/mp4">
@@ -48,59 +61,121 @@
     <canvas id="overlay"></canvas>
 </div>
 
+<div id="controls">
+    <button id="toggleBtn">Toggle Protractor</button>
+    <label>Rotate: <input type="range" id="rotateSlider" min="0" max="360" value="0"></label>
+</div>
+
 <script>
     const canvas = document.getElementById("overlay");
     const ctx = canvas.getContext("2d");
-    canvas.width = 800;
-    canvas.height = 450;
+    canvas.width = 1000;
+    canvas.height = 600;
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    let protractorVisible = true;
+    let protractorCenter = { x: canvas.width / 2, y: canvas.height / 2 };
+    let protractorRotation = 0;
     const radius = 180;
 
-    // Draw outer circle
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.stroke();
+    let dragging = false;
+    let dragOffset = { x: 0, y: 0 };
 
-    // Draw degree marks
-    for (let deg = 0; deg < 360; deg += 10) {
-        const angle = (deg - 90) * Math.PI / 180;
-        const inner = deg % 30 === 0 ? radius - 15 : radius - 8;
-        const outer = radius;
-        const x1 = centerX + inner * Math.cos(angle);
-        const y1 = centerY + inner * Math.sin(angle);
-        const x2 = centerX + outer * Math.cos(angle);
-        const y2 = centerY + outer * Math.sin(angle);
+    function drawProtractor() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!protractorVisible) return;
+
+        ctx.save();
+        ctx.translate(protractorCenter.x, protractorCenter.y);
+        ctx.rotate(protractorRotation * Math.PI / 180);
+
+        // Outer circle
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
+        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
         ctx.stroke();
 
-        // Label every 30 degrees
-        if (deg % 30 === 0) {
-            const labelX = centerX + (radius - 30) * Math.cos(angle);
-            const labelY = centerY + (radius - 30) * Math.sin(angle);
-            ctx.font = "14px Arial";
-            ctx.fillStyle = "white";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(deg.toString(), labelX, labelY);
+        // Degree marks
+        for (let deg = 0; deg < 360; deg += 10) {
+            const angle = (deg - 90) * Math.PI / 180;
+            const inner = deg % 30 === 0 ? radius - 15 : radius - 8;
+            const outer = radius;
+            const x1 = inner * Math.cos(angle);
+            const y1 = inner * Math.sin(angle);
+            const x2 = outer * Math.cos(angle);
+            const y2 = outer * Math.sin(angle);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // Labels every 30 degrees
+            if (deg % 30 === 0) {
+                const labelX = (radius - 30) * Math.cos(angle);
+                const labelY = (radius - 30) * Math.sin(angle);
+                ctx.font = "14px Arial";
+                ctx.fillStyle = "white";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(deg.toString(), labelX, labelY);
+            }
         }
+
+        // Crosshairs
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(10, 0);
+        ctx.moveTo(0, -10);
+        ctx.lineTo(0, 10);
+        ctx.stroke();
+
+        ctx.restore();
     }
 
-    // Draw crosshairs at the center
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(centerX - 10, centerY);
-    ctx.lineTo(centerX + 10, centerY);
-    ctx.moveTo(centerX, centerY - 10);
-    ctx.lineTo(centerX, centerY + 10);
-    ctx.stroke();
+    drawProtractor();
+
+    // Toggle button
+    const toggleBtn = document.getElementById("toggleBtn");
+    toggleBtn.addEventListener("click", () => {
+        protractorVisible = !protractorVisible;
+        drawProtractor();
+    });
+
+    // Rotation slider
+    const rotateSlider = document.getElementById("rotateSlider");
+    rotateSlider.addEventListener("input", (e) => {
+        protractorRotation = parseInt(e.target.value);
+        drawProtractor();
+    });
+
+    // Dragging logic
+    canvas.addEventListener("mousedown", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const dx = mouseX - protractorCenter.x;
+        const dy = mouseY - protractorCenter.y;
+
+        if (Math.sqrt(dx * dx + dy * dy) < radius) {
+            dragging = true;
+            dragOffset.x = dx;
+            dragOffset.y = dy;
+        }
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+        if (dragging) {
+            const rect = canvas.getBoundingClientRect();
+            protractorCenter.x = e.clientX - rect.left - dragOffset.x;
+            protractorCenter.y = e.clientY - rect.top - dragOffset.y;
+            drawProtractor();
+        }
+    });
+
+    canvas.addEventListener("mouseup", () => dragging = false);
+    canvas.addEventListener("mouseleave", () => dragging = false);
 </script>
 </body>
 </html>
-
