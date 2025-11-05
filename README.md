@@ -1,0 +1,1 @@
+This repository contains the code for a physics website that was created to provide a visualization of physics equations and concepts to students taking mechanics. Students can load several different videos of wheels, disks, etc., and overlay protractors and rulers to calculate moments of different objects. The website is built on HTML, CSS, and JavaScript and hosted on Vercel. 
